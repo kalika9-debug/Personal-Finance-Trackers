@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Personal Finance + Personality Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+<style>
+  body{font-family:"Poppins",sans-serif;background:linear-gradient(135deg,#f8f5ff,#ebe3ff);color:#333;margin:0;text-align:center;}
+  header{background:#4b0082;color:#fff;padding:25px;font-size:1.6rem;box-shadow:0 4px 10px rgba(0,0,0,0.1);}
+  .container{margin:40px auto;background:#fff;border-radius:20px;padding:40px;max-width:900px;box-shadow:0 6px 20px rgba(75,0,130,0.15);}
+  input,button,select{padding:12px;border-radius:10px;border:1px solid #ccc;font-size:1rem;width:80%;max-width:400px;margin-top:10px;}
+  button{background:linear-gradient(90deg,#6a0dad,#4b0082);color:white;border:none;cursor:pointer;font-weight:600;transition:.3s;}
+  button:hover{transform:scale(1.05);}
+  .dropdown{position:relative;width:80%;max-width:400px;margin:0 auto;}
+  .dropdown-list{position:absolute;top:45px;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:10px;z-index:10;max-height:150px;overflow-y:auto;display:none;box-shadow:0 4px 8px rgba(0,0,0,0.1);}
+  .dropdown-list div{padding:10px;cursor:pointer;}
+  .dropdown-list div:hover{background:#f0ebff;}
+  canvas{margin:25px auto;display:block;}
+  .summary,.insight-box{background:#faf6ff;border-radius:12px;padding:15px;margin-top:15px;text-align:left;box-shadow:0 0 8px rgba(106,13,173,0.1);}
+  .insight-box{background:#f0ebff;border-left:5px solid #6a0dad;}
+  h2{color:#4b0082;font-weight:600;}
+  .page{display:none;background:#fff;padding:40px 50px;border-radius:24px;box-shadow:0 10px 30px rgba(75,0,130,0.2);width:90%;max-width:600px;text-align:center;margin:40px auto;}
+  .active{display:block;}
+  .slider-container{text-align:left;margin:12px 0;background:#f6f2ff;padding:8px 12px;border-radius:12px;}
+  input[type=range]{width:100%;accent-color:#6a0dad;}
+  .slider-value{color:#4b0082;font-weight:600;}
+  .insight-box-personality{background:#f5f0ff;border-left:5px solid #6a0dad;padding:15px;border-radius:12px;margin-top:18px;}
+</style>
+</head>
+<body>
+
+<header>💸 Smart Personal Finance Dashboard</header>
+
+<!-- Main Dashboard -->
+<div class="container" id="inputSection">
+  <h2>🔍 Select or Search Your Name</h2>
+  <p>Type your name to view your personalized financial insights.</p>
+
+  <div class="dropdown">
+    <input type="text" id="username" placeholder="Search user..." oninput="filterNames()" onclick="toggleDropdown(true)">
+    <div id="dropdownList" class="dropdown-list"></div>
+  </div>
+
+  <input type="number" id="income" placeholder="Enter Monthly Income (₹)">
+  <input type="number" id="goal" placeholder="Savings Goal (%)">
+  <button onclick="showInsights()">Show My Insights</button>
+</div>
+
+<!-- Dashboard Result -->
+<div class="container" id="resultSection" style="display:none;">
+  <h2 id="userTitle"></h2>
+  <div id="summary" class="summary"></div>
+  <canvas id="categoryChart"></canvas>
+  <div id="insightBox" class="insight-box"></div>
+  <button onclick="restart()">↩️ Back</button>
+</div>
+
+<!-- Personality Tracker -->
+<div id="personalityTracker" style="display:none;">
+  <div class="page active" id="page2">
+    <h1>🧠 Financial Behaviour</h1>
+    <select id="behavior">
+      <option value="Saver">Saver 💰</option>
+      <option value="Spender">Spender 🛍️</option>
+      <option value="Investor">Investor 📈</option>
+      <option value="Planner">Planner 📊</option>
+    </select>
+    <select id="track">
+      <option value="Daily">Daily 📅</option>
+      <option value="Weekly">Weekly 🗓️</option>
+      <option value="Monthly">Monthly 📆</option>
+      <option value="Rarely">Rarely 😅</option>
+    </select>
+    <input type="number" id="pSpent" placeholder="Total Spent (₹)">
+    <input type="number" id="pInvest" placeholder="Invested Amount (₹)">
+    <input type="number" id="pGoal" placeholder="Savings Goal (%)">
+    <button onclick="nextPage(3)">Next →</button>
+  </div>
+
+  <div class="page" id="page3">
+    <h1>📊 Spending Pattern</h1>
+    <div class="slider-container">🍔 Food: <span id="v1">20</span>% <input type="range" id="food" min="0" max="100" value="20" oninput="v1.textContent=this.value"></div>
+    <div class="slider-container">🚗 Travel: <span id="v2">15</span>% <input type="range" id="travel" min="0" max="100" value="15" oninput="v2.textContent=this.value"></div>
+    <div class="slider-container">🛍️ Shopping: <span id="v3">25</span>% <input type="range" id="shop" min="0" max="100" value="25" oninput="v3.textContent=this.value"></div>
+    <div class="slider-container">🎬 Entertainment: <span id="v4">10</span>% <input type="range" id="ent" min="0" max="100" value="10" oninput="v4.textContent=this.value"></div>
+    <div class="slider-container">💡 Others: <span id="v5">30</span>% <input type="range" id="other" min="0" max="100" value="30" oninput="v5.textContent=this.value"></div>
+    <button onclick="analyze()">Show My Report →</button>
+  </div>
+
+  <div class="page" id="page4">
+    <h1 id="summaryTitle"></h1>
+    <div id="summaryText"></div>
+    <canvas id="pChart"></canvas>
+    <div id="pInsight" class="insight-box-personality"></div>
+    <button onclick="restart()">↩️ Restart</button>
+  </div>
+</div>
+
+<script>
+const dataset=[
+  {date:"01-10-2025",category:"Food",amount:150,user:"Aarav Sharma"},
+  {date:"02-10-2025",category:"Books",amount:350,user:"Rohan Gupta"},
+  {date:"03-10-2025",category:"Food",amount:180,user:"Neha Reddy"},
+  {date:"04-10-2025",category:"Entertainment",amount:200,user:"Vihaan Singh"},
+  {date:"05-10-2025",category:"Groceries",amount:120,user:"Ananya Joshi"}
+];
+const uniqueUsers=[...new Set(dataset.map(d=>d.user))];
+const dropdownList=document.getElementById("dropdownList");
+
+function populateDropdown(){
+  dropdownList.innerHTML="";
+  uniqueUsers.forEach(name=>{
+    const div=document.createElement("div");
+    div.textContent=name;
+    div.onclick=()=>selectName(name);
+    dropdownList.appendChild(div);
+  });
+}
+function toggleDropdown(show){dropdownList.style.display=show?"block":"none";}
+function filterNames(){
+  const input=document.getElementById("username").value.toLowerCase();
+  dropdownList.innerHTML="";
+  const filtered=uniqueUsers.filter(n=>n.toLowerCase().includes(input));
+  filtered.forEach(name=>{
+    const div=document.createElement("div");
+    div.textContent=name;
+    div.onclick=()=>selectName(name);
+    dropdownList.appendChild(div);
+  });
+  toggleDropdown(filtered.length>0);
+}
+function selectName(name){document.getElementById("username").value=name;toggleDropdown(false);}
+
+function showInsights(){
+  const name=document.getElementById("username").value.trim();
+  const income=parseFloat(document.getElementById("income").value);
+  const goal=parseFloat(document.getElementById("goal").value);
+  if(!name||!income||!goal)return alert("Please fill all fields!");
+  const userData=dataset.filter(d=>d.user.toLowerCase()===name.toLowerCase());
+  
+  if(userData.length===0){
+    // unknown user -> go personality test
+    user.name=name;
+    user.income=income;
+    document.getElementById("inputSection").style.display="none";
+    document.getElementById("personalityTracker").style.display="block";
+    return;
+  }
+
+  // existing user -> dashboard
+  document.getElementById("inputSection").style.display="none";
+  document.getElementById("resultSection").style.display="block";
+  const totalSpent=userData.reduce((s,d)=>s+d.amount,0);
+  const savings=income-totalSpent;
+  const sp=((savings/income)*100).toFixed(2);
+  const goalStatus=sp>=goal?"✅ Goal Achieved":"⚠️ Below Target";
+  document.getElementById("userTitle").innerText=`📊 ${name}'s Financial Insights`;
+  document.getElementById("summary").innerHTML=`
+    <p><b>Total Income:</b> ₹${income}</p>
+    <p><b>Total Expenses:</b> ₹${totalSpent}</p>
+    <p><b>Savings:</b> ₹${savings} (${sp}%)</p>
+    <p><b>Status:</b> ${goalStatus}</p>`;
+  const byCategory={};
+  userData.forEach(d=>byCategory[d.category]=(byCategory[d.category]||0)+d.amount);
+  new Chart(document.getElementById("categoryChart"),{
+    type:"pie",
+    data:{labels:Object.keys(byCategory),datasets:[{data:Object.values(byCategory),backgroundColor:["#4b0082","#9c27b0","#ba68c8","#ce93d8","#ab47bc"]}]},
+    options:{plugins:{legend:{position:"bottom"}}}
+  });
+}
+
+let user={};
+function nextPage(n){
+  document.querySelector('.active').classList.remove('active');
+  document.getElementById('page'+n).classList.add('active');
+  if(n===3){
+    user.behavior=document.getElementById('behavior').value;
+    user.track=document.getElementById('track').value;
+    user.spent=+document.getElementById('pSpent').value;
+    user.invest=+document.getElementById('pInvest').value;
+    user.goal=+document.getElementById('pGoal').value;
+  }
+}
+
+function analyze(){
+  user.food=+document.getElementById('food').value;
+  user.travel=+document.getElementById('travel').value;
+  user.shop=+document.getElementById('shop').value;
+  user.ent=+document.getElementById('ent').value;
+  user.other=+document.getElementById('other').value;
+  const total=user.spent+user.invest;
+  const save=user.income-total;
+  const saveP=((save/user.income)*100).toFixed(2);
+  const goalStatus=saveP>=user.goal?"✅ Goal Achieved!":"⚠️ Goal Missed";
+  let insight="";
+  switch(user.behavior){
+    case"Spender":insight+="🛍 Enjoys life — try auto-savings.<br>";break;
+    case"Saver":insight+="💰 Great control — invest more.<br>";break;
+    case"Investor":insight+="📈 Smart — keep emergency funds.<br>";break;
+    case"Planner":insight+="📊 Balanced — allow small fun.<br>";break;
+  }
+  document.getElementById('summaryTitle').innerText=`📈 ${user.name}, Your Finance Report`;
+  document.getElementById('summaryText').innerHTML=`
+    <p>You’re a <b>${user.behavior}</b> who tracks <b>${user.track}</b>.</p>
+    <p>Income: ₹${user.income} | Spent: ₹${user.spent} | Invested: ₹${user.invest}</p>
+    <p><b>Savings:</b> ₹${save} (${saveP}%)</p>
+    <p><b>Status:</b> ${goalStatus}</p>`;
+  document.getElementById('pInsight').innerHTML=insight;
+  const ctx=document.getElementById('pChart').getContext('2d');
+  const data=[user.food,user.travel,user.shop,user.ent,user.other];
+  const labels=['Food','Travel','Shopping','Entertainment','Others'];
+  if(window.myChart)window.myChart.destroy();
+  window.myChart=new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:['#4b0082','#7e22ce','#9c27b0','#ba68c8','#ce93d8']}] }});
+  document.querySelector('.active').classList.remove('active');
+  document.getElementById('page4').classList.add('active');
+}
+
+function restart(){location.reload();}
+populateDropdown();
+</script>
+</body>
+</html>
